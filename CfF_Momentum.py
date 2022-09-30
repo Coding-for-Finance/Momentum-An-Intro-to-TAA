@@ -15,7 +15,6 @@ Intuition: Momentum strategy (buying winners, selling losers) is a well-document
              that investors transpose past returns into the future, keeping the momentum going, up until to the point
               of reversal. Momentum has also been established as one of the Fama & French-style risk-factors
                explaining stock returns.
-Setup:
 """
 
 # %% Imports
@@ -29,9 +28,11 @@ import seaborn as sns
 import warnings
 
 
+
 # importing module, need to specify local path where module is located!
 sys.path.insert(0, '/Users/danielkotas/Documents/Documents – Daniel’s MacBook Air/Important /Extra Learning/modules')
 from portfolio_analytics import port_an
+# define path where the file and data is stored!
 wd = r'/Users/danielkotas/Documents/Documents – Daniel’s MacBook Air/Important /Extra Learning'
 
 

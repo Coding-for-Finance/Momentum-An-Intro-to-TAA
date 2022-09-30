@@ -26,6 +26,7 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import pickle
 import seaborn as sns
+import warnings
 
 
 # importing module, need to specify local path where module is located!
@@ -41,7 +42,7 @@ def selector(returns, n_long, n_short):
     winners = list(cumprod_for_sorting.nlargest(n_long).keys())
     losers = list(cumprod_for_sorting.nsmallest(n_short).keys())
 
-
+    # determine weights by cross-sectional scaling
     loser_weights = cumprod_for_sorting[losers].div(cumprod_for_sorting[losers].sum(axis=0))
     winner_weights = cumprod_for_sorting[winners].div(cumprod_for_sorting[winners].sum(axis=0))
     return winners, losers, winner_weights, loser_weights
@@ -54,15 +55,13 @@ def column_index(df, query_cols):
 #PUT PORT AN CLASS HERE AS WELL!!!
 
 
-
-
 # %% Parameters
 
 # set a parameter whether to load from Yahoo (True) or from pickle file (False). Our if condition in "Data loading"
 # will decide based on this parameter which way to import data. Note that if loading from pickle file is selected,
 # static data with fixed tickers and dates will be loaded
-load_from_yahoo = False
-load_from_pickle = True
+load_from_yahoo = True
+load_from_pickle = False
 load_from_excel = False
 
 # define start date for Yahoo import
@@ -158,14 +157,14 @@ for i in range(lookback, len(df_returns)):
     dict_weights['df_weights_pureTS'].iloc[i+1:i+1 + holding_period, loser_index] = -1 / n_short
 
     # Momentum variation No.2: Cumulative. Every period, we determine the winners/loser and assign weights for the following holding period, but add them to the weights which we determined previously. We are cumulating the weights which were determined in previous periods
-    dict_weights['df_weights_TS_cumulative'].iloc[i+1:i+1 + holding_period, winners_index] = dict_weights['df_weights_TS_cumulative'].iloc[i + 1 :i + 1 + holding_period, winners_index] + 1 / n_long  # change looping through indexes and addition with datetime difference
-    dict_weights['df_weights_TS_cumulative'].iloc[i+1:i+1 + holding_period, loser_index] = dict_weights['df_weights_TS_cumulative'].iloc[i + 1 :i + 1 + holding_period, loser_index] - 1 / n_short
+    dict_weights['df_weights_TS_cumulative'].iloc[i+1:i+1 + holding_period, winners_index] = dict_weights['df_weights_TS_cumulative'].iloc[i+1:i+1 + holding_period, winners_index] + 1 / n_long
+    dict_weights['df_weights_TS_cumulative'].iloc[i+1:i+1 + holding_period, loser_index] = dict_weights['df_weights_TS_cumulative'].iloc[i+1:i+1 + holding_period, loser_index] - 1 / n_short
 
     # Momentum variation No.3: Scaled cumulative. Until now, we have been assigning the weights in an equal weights fashion, i.e. if we had 3 "winners", each received a weights of 0.33. Now we want to scale the weights
     # such that the winners which won the most will have the highest weight and vice versa. It means that not only the highest performing stocks will receive positive weights, but we also take magnitude of the performance into account.
     # Practically, we already wrote the code for weights calculation in the "selector" function, therefore we only need to assing the weights
-    dict_weights['df_weights_scaling'].iloc[i + 1:i + 1 + holding_period, winners_index] = winner_weights.values
-    dict_weights['df_weights_scaling'].iloc[i+1:i + 1 + holding_period, loser_index] =  -1 * loser_weights.values
+    dict_weights['df_weights_scaling'].iloc[i+1:i+1 + holding_period, winners_index] = dict_weights['df_weights_scaling'].iloc[i+1:i+1 + holding_period, winners_index] + winner_weights.values
+    dict_weights['df_weights_scaling'].iloc[i+1:i+1 + holding_period, loser_index] = dict_weights['df_weights_scaling'].iloc[i+1:i+1 + holding_period, loser_index]  - 1 * loser_weights.values
 
 # Weights determined - need to scale them and multiply with returns to get returns and then sum them up to get strategy returns
 dict_scaled_weights = {}
@@ -230,6 +229,7 @@ plt.show() #if we want to display the final plot, displays the plot with the pro
 ## Weights stacked plot
 
 for strategy, name in zip(dict_scaled_weights, strategy_names):
+    warnings.filterwarnings('ignore')
     fig, ax = plt.subplots()
     # split dataframe df into negative only and positive only values
     df_neg, df_pos = dict_scaled_weights[strategy].clip(upper=0), dict_scaled_weights[strategy].clip(lower=0)
